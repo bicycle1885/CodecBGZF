@@ -30,10 +30,13 @@ const EOF_BLOCK = [
 ]
 
 function Base.close(stream::BGZFCompressorStream)
-    if stream.state.mode != :panic
+    mode = stream.state.mode
+    if mode != :panic
         TranscodingStreams.changemode!(stream, :close)
     end
-    @assert write(stream.stream, EOF_BLOCK) == 28
+    if mode == :write
+        @assert write(stream.stream, EOF_BLOCK) == 28
+    end
     close(stream.stream)
     return nothing
 end
@@ -72,13 +75,15 @@ function TranscodingStreams.process(codec::BGZFCompressor, input::Memory, output
         error[] = ErrorException(CodecZlib.zlib_error_message(zstream, code))
         return 0, 0, :error
     end
+    avail_in = min(input.size, BGZF_SAFE_BLOCK_SIZE)
     zstream.next_in = input.ptr
-    zstream.avail_in = min(input.size, BGZF_SAFE_BLOCK_SIZE)
+    zstream.avail_in = avail_in
+    avail_out = output.size - 8
     zstream.next_out = output.ptr + 8
-    zstream.avail_out = output.size - 8
+    zstream.avail_out = avail_out
     code = CodecZlib.deflate!(zstream, CodecZlib.Z_FINISH)
-    Δin = Int(input.size - zstream.avail_in)
-    Δout = Int(output.size - 8 + zstream.avail_out)
+    Δin = Int(avail_in - zstream.avail_in)
+    Δout = Int(avail_out - zstream.avail_out) + 8
     if code == CodecZlib.Z_STREAM_END
         # BGZF header (compatible with gzip)
         output[ 1] = 0x1f  # ID1
@@ -97,7 +102,7 @@ function TranscodingStreams.process(codec::BGZFCompressor, input::Memory, output
         output[14] = 0x43  # SI2
         unsafe_store!(Ptr{UInt16}(output.ptr + 14), htol(0x0002))            # SLEN
         unsafe_store!(Ptr{UInt16}(output.ptr + 16), htol(UInt16(Δout - 1)))  # BSIZE
-        return Δin, Δout + 8, :end
+        return Δin, Δout, :end
     elseif code == Z_OK
         error[] = ErrorException("failed to deflate")
     else
