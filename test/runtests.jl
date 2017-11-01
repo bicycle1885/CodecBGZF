@@ -33,6 +33,10 @@ using Base.Test
     stream = BGZFDecompressorStream(IOBuffer(vcat(data, data, data)))
     seek(stream, UInt64(sizeof(data) << 16))
     @test read(stream, 5) == b"abrac"
+    seek(stream, UInt64(sizeof(data) << 16) | UInt64(2))
+    @test read(stream, 5) == b"racad"
+    # Seeking a stream to an unaligned offset will fail.
+    @test_throws Exception seek(stream, UInt64((sizeof(data) + 1) << 16) | UInt64(2))
     close(stream)
 
     test_roundtrip_read(BGZFCompressorStream, BGZFDecompressorStream)
