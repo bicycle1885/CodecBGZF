@@ -12,7 +12,7 @@ function BGZFDecompressor(;windowbits::Integer=CodecZlib.Z_DEFAULT_WINDOWBITS)
 end
 
 function Base.show(io::IO, codec::BGZFDecompressor)
-    print(io, summary(codec), "(<windowbits=$(windowbits))")
+    print(io, summary(codec), "(windowbits=$(windowbits))")
 end
 
 const BGZFDecompressorStream{S} = TranscodingStream{BGZFDecompressor,S} where S<:IO
@@ -23,7 +23,9 @@ end
 
 function Base.seek(stream::BGZFDecompressorStream, voffset::UInt64)
     TranscodingStreams.changemode!(stream, :read)
-    seek(stream.stream, voffset >> 0xffff)
+    seek(stream.stream, voffset >> 16)
+    TranscodingStreams.initbuffer!(stream.state.buffer1)
+    TranscodingStreams.initbuffer!(stream.state.buffer2)
     skip(stream, voffset & 0xffff)
     return
 end
