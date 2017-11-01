@@ -23,6 +23,18 @@ using Base.Test
         0x00, 0x00, 0x00, 0x00]
     @test read(BGZFDecompressorStream(IOBuffer(data))) == b"foobar"
 
+    # test.bgz is created using the bgzip command
+    bgzfile = joinpath(dirname(@__FILE__), "test.bgz")
+    stream = BGZFDecompressorStream(open(bgzfile))
+    @test read(stream) == b"abracadabra"
+    close(stream)
+
+    data = read(bgzfile)
+    stream = BGZFDecompressorStream(IOBuffer(vcat(data, data, data)))
+    seek(stream, UInt64(sizeof(data) << 16))
+    @test read(stream, 5) == b"abrac"
+    close(stream)
+
     test_roundtrip_read(BGZFCompressorStream, BGZFDecompressorStream)
     test_roundtrip_write(BGZFCompressorStream, BGZFDecompressorStream)
     test_roundtrip_lines(BGZFCompressorStream, BGZFDecompressorStream)
