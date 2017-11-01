@@ -8,6 +8,19 @@ import TranscodingStreams:
 using Base.Test
 
 @testset "BGZF Codec" begin
+    # Test the EOF trailer (28 bytes).
+    buffer = IOBuffer()
+    stream = BGZFCompressorStream(buffer)
+    write(stream, "foobar")
+    data = buffer.data
+    close(stream)
+    @test sizeof(data) ≥ 28
+    @test data[end-27:end] == [
+        0x1f, 0x8b, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0x06, 0x00, 0x42, 0x43, 0x02, 0x00,
+        0x1b, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00]
+
     test_roundtrip_read(BGZFCompressorStream, BGZFDecompressorStream)
     test_roundtrip_write(BGZFCompressorStream, BGZFDecompressorStream)
     test_roundtrip_lines(BGZFCompressorStream, BGZFDecompressorStream)

@@ -100,8 +100,8 @@ function TranscodingStreams.process(codec::BGZFCompressor, input::Memory, output
         output[12] = 0x00  # XLEN
         output[13] = 0x42  # SI1
         output[14] = 0x43  # SI2
-        unsafe_store!(Ptr{UInt16}(output.ptr + 14), htol(0x0002))            # SLEN
-        unsafe_store!(Ptr{UInt16}(output.ptr + 16), htol(UInt16(Δout - 1)))  # BSIZE
+        unsafe_store!(Ptr{UInt16}(output.ptr+14), htol(0x0002))          # SLEN
+        unsafe_store!(Ptr{UInt16}(output.ptr+16), htol(UInt16(Δout-1)))  # BSIZE
         return Δin, Δout, :end
     elseif code == Z_OK
         error[] = ErrorException("failed to deflate")
