@@ -30,6 +30,9 @@ A virtual file offset is an unsigned 64-bit integer, which is defined as
 `coffset<<16|uoffset`, where `coffset` is an offset into the BGZF file to the
 beginning of a block, and `uoffset` is an offset into the uncompressed data.
 
+Seeking a stream to a position from which a BGZF block does not start will
+result in an error.
+
 This method is not available in the write mode.
 """
 function Base.seek(stream::BGZFDecompressorStream, voffset::UInt64)
